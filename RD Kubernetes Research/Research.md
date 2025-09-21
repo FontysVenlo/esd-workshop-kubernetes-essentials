@@ -89,7 +89,7 @@ While Kubernetes has emerged as a leading container orchestration platform, seve
 
 ### Visual Representation
 
-![Kubernetes diagram](figures/Kubernetes%20diagram.png)
+![Kubernetes diagram](Kubernetes%20diagram.png)
 
 ### Conclusion
 
