@@ -95,12 +95,79 @@ While Kubernetes has emerged as a leading container orchestration platform, seve
 
 Although alternatives such as Docker Swarm, Nomad, and Mesos provide simpler or specialized orchestration solutions, Kubernetes is the most comprehensive platform for managing containerized applications at scale. Its combination of ecosystem support, feature richness, scalability, and portability ensures its continued dominance in both enterprise and cloud-native environments (Burns et al., 2016; CNCF, 2020).
 
+## When and When Not to Use Kubernetes
+
+Kubernetes is a powerful platform for managing containerized applications, but it is not always the best choice. The decision to adopt Kubernetes depends on factors such as application complexity, scaling needs, team expertise, and infrastructure resources.
+
+| When to Use Kubernetes | When Not to Use Kubernetes |
+|------------------------|---------------------------|
+| Microservices architecture with multiple, loosely coupled services (Burns et al., 2016) | Monolithic applications with simple deployment requirements (CNCF, 2020) |
+| Applications requiring high availability and dynamic scaling (Hightower et al., 2017) | Low-traffic or single-instance applications where scaling is unnecessary (Verma et al., 2015) |
+| CI/CD pipelines with frequent deployments (Hightower et al., 2017) | Teams with limited DevOps expertise or operational resources (CNCF, 2020) |
+| Multi-cloud or hybrid-cloud deployments requiring portability (Burns et al., 2016) | Projects with constrained infrastructure or strict simplicity requirements (McLuckie, 2015) |
+| Workloads that benefit from self-healing, automated scaling, and rolling updates (Hightower et al., 2017) | Serverless or PaaS environments where orchestration is handled by the platform (CNCF, 2020) |
+
+### Analysis
+
+Kubernetes shines in complex, dynamic environments where automation, scaling, and fault tolerance are crucial. However, for small-scale, simple applications or teams lacking the necessary expertise, its operational overhead may outweigh the benefits. Organizations should carefully evaluate their workload characteristics and resource availability before committing to Kubernetes.
+
+## Where to Start and How to Use Kubernetes
+
+### Step 1: Understand the Fundamentals
+
+Before deploying applications, it is essential to understand Kubernetes concepts:
+
+- **Cluster:** A set of machines (nodes) running Kubernetes.  
+- **Pod:** The smallest deployable unit, encapsulating one or more containers.  
+- **Deployment:** Defines how pods are replicated and updated.  
+- **Service:** Provides stable networking and load balancing for pods.  
+- **Namespace:** Logical partitioning of cluster resources (Hightower et al., 2017).  
+
+### Step 2: Set Up a Local or Cloud Environment
+
+- **Local Kubernetes:** Use Minikube, Kind, or k3s to create a lightweight local cluster for experimentation (CNCF, 2020).  
+- **Cloud Providers:** Managed services like Google Kubernetes Engine (GKE), Amazon EKS, or Azure AKS provide fully managed clusters, reducing operational overhead.  
+
+### Step 3: Deploy Your First Application
+
+1. Write a simple containerized application (e.g., a web server).  
+2. Define a `Deployment` YAML to specify replicas and container images.  
+3. Expose the deployment via a `Service` to allow access.  
+4. Apply the configuration using `kubectl apply -f deployment.yaml` (Burns et al., 2016).  
+
+### Step 4: Explore Kubernetes Features
+
+- Experiment with horizontal pod autoscaling to handle traffic spikes.  
+- Configure rolling updates to deploy new versions with zero downtime.  
+- Test self-healing by intentionally killing pods to observe automatic rescheduling.  
+
+### Step 5: Use Best Practices
+
+- Keep deployments declarative and version-controlled using YAML manifests.  
+- Use namespaces to separate environments (e.g., dev, staging, production).  
+- Monitor applications using tools like Prometheus and Grafana.  
+- Leverage Helm charts or Operators to simplify complex application deployments (Hightower et al., 2017).  
+
+### Resources for Learning
+
+- **Official Documentation:** <https://kubernetes.io/docs/>  
+- **Interactive Tutorials:** Katacoda Kubernetes scenarios  
+- **Books:** *Kubernetes Up and Running* by Hightower et al. (2017)  
+
 ---
 
 ## References
 
-- Burns, B., Grant, B., Oppenheimer, D., Brewer, E., & Wilkes, J., 2016. *Borg, Omega, and Kubernetes*. Communications of the ACM, 59(5), pp.50–57. [Link](https://doi.org/10.1145/2890784)  
-- McLuckie, C., 2015. *From Google to the world: The Kubernetes origin story*. Google Cloud Blog. [Link](https://cloud.google.com/blog/products/containers-kubernetes/from-google-to-the-world-the-kubernetes-origin-story)  
-- Verma, A., Pedrosa, L., Korupolu, M.R., Oppenheimer, D., Tune, E., & Wilkes, J., 2015. *Large-scale cluster management at Google with Borg*. Proceedings of the 10th European Conference on Computer Systems (EuroSys). [Link](https://doi.org/10.1145/2741948.2741964)  
-- Cloud Native Computing Foundation (CNCF), 2020. *Kubernetes project journey report*. [Link](https://www.cncf.io/reports/kubernetes-project-journey/)  
-- Hightower, K., Burns, B., & Beda, J., 2017. *Kubernetes: Up and Running*. O'Reilly Media.
+- Burns, B., Grant, B., Oppenheimer, D., Brewer, E. and Wilkes, J., 2016. Borg, Omega, and Kubernetes. *Communications of the ACM*, 59(5), pp.50–57. Available at: <https://doi.org/10.1145/2890784> [Accessed 24 September 2025].  
+- McLuckie, C., 2015. From Google to the world: The Kubernetes origin story. *Google Cloud Blog*. Available at: <https://cloud.google.com/blog/products/containers-kubernetes/from-google-to-the-world-the-kubernetes-origin-story> [Accessed 24 September 2025].  
+- Verma, A., Pedrosa, L., Korupolu, M.R., Oppenheimer, D., Tune, E. and Wilkes, J., 2015. Large-scale cluster management at Google with Borg. *EuroSys 2015*. ACM. Available at: <https://doi.org/10.1145/2741948.2741964> [Accessed 24 September 2025].  
+- CNCF, 2020. Kubernetes project journey report. Available at: <https://www.cncf.io/reports/kubernetes-project-journey/> [Accessed 24 September 2025].  
+- Hightower, K., Burns, B. and Beda, J., 2017. *Kubernetes: Up and Running*. O'Reilly Media.  
+- PhoenixNAP, 2023. When to Use Kubernetes (and Why). Available at: <https://phoenixnap.com/kb/when-to-use-kubernetes> [Accessed 24 September 2025].  
+- Appvia, 2024. 5 Reasons You Should NOT Use Kubernetes. Available at: <https://www.appvia.io/blog/5-reasons-you-should-not-use-kubernetes> [Accessed 24 September 2025].  
+- Khg, H., 2024. The Case For Not Using Kubernetes. Medium. Available at: <https://medium.com/@dskydragon/the-case-for-not-using-kubernetes-bfa157fd123d> [Accessed 24 September 2025].  
+- Spacelift, 2025. 12 Kubernetes Use Cases [Examples for 2025]. Available at: <https://spacelift.io/blog/kubernetes-use-cases> [Accessed 24 September 2025].  
+- Erbis, 2023. When Don't You Need Kubernetes? Available at: <https://erbis.com/blog/need-for-kubernetes/> [Accessed 24 September 2025].  
+- IBM, 2023. Kubernetes Examples, Applications & Use Cases. Available at: <https://www.ibm.com/think/topics/kubernetes-use-cases> [Accessed 24 September 2025].  
+- Kubernetes, 2025. Kubernetes Documentation. Available at: <https://kubernetes.io/docs/> [Accessed 24 September 2025].  
+- Katacoda, 2025. Kubernetes Interactive Tutorials. Available at: <https://www.katacoda.com/courses/kubernetes> [Accessed 24 September 2025].  
