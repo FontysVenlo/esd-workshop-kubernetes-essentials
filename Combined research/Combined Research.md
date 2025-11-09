@@ -152,3 +152,37 @@ Kubernetes consists of two main layers: **control plane** and **worker nodes**.
 - [Kubernetes Official Documentation](https://kubernetes.io/docs/)  
 - Interactive tutorials: Katacoda Kubernetes scenarios  
 - Book: *Kubernetes Up & Running* by Hightower et al.  
+
+## References
+
+Appvia, 2024. 5 Reasons You Should NOT Use Kubernetes. Available at: https://www.appvia.io/blog/5-reasons-you-should-not-use-kubernetes [Accessed 24 September 2025].
+
+“Kubernetes,” 2025. Kubernetes Documentation. Available at: https://kubernetes.io/docs/ [Accessed 24 September 2025].
+
+“Kubernetes,” Wikipedia (accessed November 2025). Available at: https://en.wikipedia.org/wiki/Kubernetes
+
+“Kubernetes,” The Cloud Native Computing Foundation (CNCF) / Kubernetes.io (accessed November 2025). Available at: https://kubernetes.io/
+
+“Kubernetes overview,” Red Hat Documentation, OpenShift Container Platform 4.17 (accessed November 2025). Available at: https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/getting_started/kubernetes-overview
+
+Burns, B., Grant, B., Oppenheimer, D., Brewer, E. and Wilkes, J., 2016. Borg, Omega, and Kubernetes. Communications of the ACM, 59(5), pp.50–57. Available at: https://doi.org/10.1145/2890784 [Accessed 24 September 2025].
+
+CNCF, 2020. Kubernetes project journey report. Available at: https://www.cncf.io/reports/kubernetes-project-journey/ [Accessed 24 September 2025].
+
+Erbis, 2023. When Don't You Need Kubernetes? Available at: https://erbis.com/blog/need-for-kubernetes/ [Accessed 24 September 2025].
+
+Hightower, K., Burns, B. and Beda, J., 2017. Kubernetes: Up and Running. O'Reilly Media.
+
+IBM, 2023. Kubernetes Examples, Applications & Use Cases. Available at: https://www.ibm.com/think/topics/kubernetes-use-cases [Accessed 24 September 2025].
+
+Katacoda, 2025. Kubernetes Interactive Tutorials. Available at: https://www.katacoda.com/courses/kubernetes [Accessed 24 September 2025].
+
+Khg, H., 2024. The Case For Not Using Kubernetes. Medium. Available at: https://medium.com/@dskydragon/the-case-for-not-using-kubernetes-bfa157fd123d [Accessed 24 September 2025].
+
+McLuckie, C., 2015. From Google to the world: The Kubernetes origin story. Google Cloud Blog. Available at: https://cloud.google.com/blog/products/containers-kubernetes/from-google-to-the-world-the-kubernetes-origin-story [Accessed 24 September 2025].
+
+PhoenixNAP, 2023. When to Use Kubernetes (and Why). Available at: https://phoenixnap.com/kb/when-to-use-kubernetes [Accessed 24 September 2025].
+
+Spacelift, 2025. 12 Kubernetes Use Cases [Examples for 2025]. Available at: https://spacelift.io/blog/kubernetes-use-cases [Accessed 24 September 2025].
+
+Verma, A., Pedrosa, L., Korupolu, M.R., Oppenheimer, D., Tune, E. and Wilkes, J., 2015. Large-scale cluster management at Google with Borg. EuroSys 2015. ACM. Available at: https://doi.org/10.1145/2741948.2741964 [Accessed 24 September 2025].
