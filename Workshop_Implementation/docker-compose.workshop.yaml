@@ -1,9 +1,28 @@
-# docker-compose.workshop.yaml
-# Simplified: Just start k3s normally, setup is manual
-
 version: '3.8'
 
 services:
+  # Build backend and make it available to k3s via shared volume
+  api:
+    build: ./Backend
+    image: demo-api:local
+    container_name: workshop-api-image
+    command: ["sh", "-c", "echo 'Backend image ready' && tail -f /dev/null"]
+    volumes:
+      - image-cache:/tmp/images
+
+  # Build frontend and make it available to k3s
+  web:
+    build:
+      context: ./Frontend
+      args:
+        VITE_API_BASE: http://localhost:30080/api
+    image: demo-web:local
+    container_name: workshop-web-image
+    command: ["sh", "-c", "echo 'Frontend image ready' && tail -f /dev/null"]
+    volumes:
+      - image-cache:/tmp/images
+
+  # Main k3s cluster with auto-deploy
   k3s:
     image: rancher/k3s:v1.28.4-k3s1
     container_name: workshop-k3s
@@ -17,7 +36,9 @@ services:
     volumes:
       - k3s-data:/var/lib/rancher/k3s
       - ./kubeconfig:/output
+      # Mount k8s manifests to a read location, not the auto-deploy location
       - ./k8s:/k8s:ro
+      - image-cache:/tmp/images
     ports:
       - "30080:30080"
       - "30081:30081"
@@ -26,6 +47,124 @@ services:
       - server
       - --disable=traefik
       - --disable=servicelb
+    depends_on:
+      - api
+      - web
+    healthcheck:
+      test: ["CMD", "kubectl", "get", "nodes"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+
+  # Image loader service - loads built images into k3s containerd
+  image-loader:
+    image: docker:24-cli
+    container_name: workshop-image-loader
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - image-cache:/tmp/images
+    depends_on:
+      k3s:
+        condition: service_healthy
+      api:
+        condition: service_started
+      web:
+        condition: service_started
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -e
+        echo "==================================="
+        echo "Loading Images into k3s"
+        echo "==================================="
+        
+        # Wait a bit for k3s containerd to be ready
+        sleep 10
+        
+        # Load backend image
+        echo "📦 Loading backend image (demo-api:local)..."
+        docker save demo-api:local | docker exec -i workshop-k3s ctr images import - 2>&1 | grep -v "unpacking" || echo "Backend image loaded"
+        
+        # Load frontend image  
+        echo "📦 Loading frontend image (demo-web:local)..."
+        docker save demo-web:local | docker exec -i workshop-k3s ctr images import - 2>&1 | grep -v "unpacking" || echo "Frontend image loaded"
+        
+        echo ""
+        echo "✅ Images loaded successfully!"
+        echo ""
+        
+        # Verify images are in k3s
+        echo "📋 Verifying images in k3s..."
+        docker exec workshop-k3s ctr images list | grep demo || echo "Warning: Images not found"
+        
+        echo ""
+        echo "✅ Image loading complete!"
+        echo ""
+        
+        # Keep container running
+        tail -f /dev/null
+
+  # Deployer service - applies k8s manifests after images are loaded
+  deployer:
+    image: rancher/k3s:v1.28.4-k3s1
+    container_name: workshop-deployer
+    depends_on:
+      k3s:
+        condition: service_healthy
+      image-loader:
+        condition: service_started
+    environment:
+      - KUBECONFIG=/output/kubeconfig.yaml
+    volumes:
+      - ./kubeconfig:/output
+      - ./k8s:/k8s:ro
+    network_mode: "service:k3s"
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -e
+        echo "==================================="
+        echo "Deploying Applications"
+        echo "==================================="
+        
+        # Wait for kubeconfig
+        while [ ! -f /output/kubeconfig.yaml ]; do
+          sleep 1
+        done
+        
+        # Wait a bit for images to be loaded
+        sleep 15
+        
+        echo "📦 Deploying backend..."
+        kubectl apply -f /k8s/backend.yaml
+        
+        echo "📦 Deploying frontend..."
+        kubectl apply -f /k8s/frontend.yaml
+        
+        echo ""
+        echo "⏳ Waiting for deployments to be ready..."
+        kubectl wait --for=condition=available deployment/backend -n workshop --timeout=120s || true
+        kubectl wait --for=condition=available deployment/frontend -n workshop --timeout=120s || true
+        
+        echo ""
+        echo "==================================="
+        echo "✅ Setup Complete!"
+        echo "==================================="
+        echo ""
+        echo "🌐 Access your applications:"
+        echo "   Frontend: http://localhost:30081"
+        echo "   Backend:  http://localhost:30080/health"
+        echo ""
+        echo "🔍 Check status:"
+        echo "   docker exec workshop-k3s kubectl get pods -n workshop"
+        echo ""
+        
+        # Keep container running
+        tail -f /dev/null
 
 volumes:
   k3s-data:
+  image-cache:
