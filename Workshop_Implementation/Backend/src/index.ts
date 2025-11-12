@@ -15,8 +15,8 @@ app.use(express.json());
 
 app.use("/api", routes);
 
-app.get("/healthz", (_req, res) => res.status(200).send("ok"));
-app.get("/readyz", (_req, res) => res.status(200).send("ok"));
+app.get("/health", (_req, res) => res.status(200).send("ok"));
+app.get("/ready", (_req, res) => res.status(200).send("ok"));
 
 const server = app.listen(PORT, () => {
   console.log(`API listening on http://localhost:${PORT}`);

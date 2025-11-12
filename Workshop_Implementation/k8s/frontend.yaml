@@ -1,0 +1,73 @@
+# k8s/frontend.yaml
+# This tells Kubernetes how to run your frontend application
+
+---
+# Deployment: Manages your frontend pods
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: workshop  # Same namespace as backend
+  labels:
+    app: frontend
+spec:
+  replicas: 3  # Start with 3 copies (can scale up/down)
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        version: v1
+    spec:
+      containers:
+      - name: frontend
+        image: demo-web:local  # Same image from your docker-compose
+        imagePullPolicy: Never  # Use local image, don't download
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        # Frontend needs to know where backend is
+        # In Kubernetes, it's http://backend:8080 (service name)
+        - name: VITE_API_BASE
+          value: "http://localhost:30080/api"
+        resources:
+          requests:
+            cpu: 50m       # Frontend needs less CPU
+            memory: 64Mi   # Frontend needs less RAM
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        # Health checks - just check if nginx is responding
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Service: Makes your frontend accessible
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: workshop
+spec:
+  type: NodePort  # Accessible from outside the cluster
+  selector:
+    app: frontend
+  ports:
+  - port: 80          # Port inside Kubernetes
+    targetPort: 80    # Port nginx listens on
+    nodePort: 30081   # Port to access from your machine
+    protocol: TCP
+    name: http

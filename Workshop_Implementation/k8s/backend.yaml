@@ -1,0 +1,107 @@
+# k8s/backend.yaml
+# This tells Kubernetes how to run your backend application
+
+---
+# Namespace: A way to group related resources
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workshop
+
+---
+# PersistentVolumeClaim: Request for storage space
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-data
+  namespace: workshop
+spec:
+  accessModes:
+    - ReadWriteOnce  # Only one pod can write at a time
+  resources:
+    requests:
+      storage: 1Gi   # Request 1GB of storage
+
+---
+# Deployment: Manages your backend pods (containers)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: workshop
+  labels:
+    app: backend
+spec:
+  replicas: 2  # Start with 2 copies for the workshop
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        version: v1
+    spec:
+      containers:
+      - name: backend
+        image: demo-api:local  # Same image from your docker-compose
+        imagePullPolicy: Never  # Don't try to download, use local image
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: PORT
+          value: "8080"
+        - name: APP_VERSION
+          value: "1.0.0"
+        - name: DATA_DIR
+          value: "/data"
+        - name: DB_FILE
+          value: "app.db"
+        resources:
+          requests:
+            cpu: 100m      # Minimum CPU
+            memory: 128Mi  # Minimum RAM
+          limits:
+            cpu: 500m      # Maximum CPU
+            memory: 512Mi  # Maximum RAM
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        # Mount the persistent volume
+        volumeMounts:
+        - name: data
+          mountPath: /data  # This matches your DATA_DIR
+      # Define the volume
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: backend-data
+
+---
+# Service: Makes your backend accessible inside Kubernetes
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: workshop
+spec:
+  type: NodePort  # Accessible from outside the cluster
+  selector:
+    app: backend
+  ports:
+  - port: 8080        # Port inside Kubernetes
+    targetPort: 8080  # Port your app listens on
+    nodePort: 30080   # Port to access from your machine
+    protocol: TCP
+    name: http

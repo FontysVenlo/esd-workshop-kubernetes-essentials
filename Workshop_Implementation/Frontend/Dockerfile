@@ -5,6 +5,10 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 
+# Accept build argument and set as environment variable
+ARG VITE_API_BASE
+ENV VITE_API_BASE=$VITE_API_BASE
+
 RUN npm run build
 
 FROM nginx:alpine
