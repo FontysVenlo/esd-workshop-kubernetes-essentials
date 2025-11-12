@@ -42,6 +42,7 @@ services:
     ports:
       - "30080:30080"
       - "30081:30081"
+      - "30082:30082"
       - "6443:6443"
     command:
       - server
@@ -138,6 +139,9 @@ services:
         # Wait a bit for images to be loaded
         sleep 15
         
+        echo "📦 Deploying Kubernetes Dashboard..."
+        kubectl apply -f /k8s/dashboard.yaml
+        
         echo "📦 Deploying backend..."
         kubectl apply -f /k8s/backend.yaml
         
@@ -148,6 +152,7 @@ services:
         echo "⏳ Waiting for deployments to be ready..."
         kubectl wait --for=condition=available deployment/backend -n workshop --timeout=120s || true
         kubectl wait --for=condition=available deployment/frontend -n workshop --timeout=120s || true
+        kubectl wait --for=condition=available deployment/kubernetes-dashboard -n kubernetes-dashboard --timeout=120s || true
         
         echo ""
         echo "==================================="
@@ -155,11 +160,17 @@ services:
         echo "==================================="
         echo ""
         echo "🌐 Access your applications:"
-        echo "   Frontend: http://localhost:30081"
-        echo "   Backend:  http://localhost:30080/health"
+        echo "   Frontend:   http://localhost:30081"
+        echo "   Backend:    http://localhost:30080/health"
+        echo "   Dashboard:  https://localhost:30082"
+        echo ""
+        echo "⚠️  Dashboard uses HTTPS with self-signed cert"
+        echo "    Click 'Advanced' and 'Proceed' in your browser"
+        echo "    Then click 'Skip' on the login page"
         echo ""
         echo "🔍 Check status:"
         echo "   docker exec workshop-k3s kubectl get pods -n workshop"
+        echo "   docker exec workshop-k3s kubectl get pods -n kubernetes-dashboard"
         echo ""
         
         # Keep container running
