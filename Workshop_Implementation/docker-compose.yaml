@@ -1,16 +1,36 @@
 # compose.yaml
 services:
   api:
-    build: ./Backend
+    build: 
+      context: ./Backend
+      args:
+        APP_VERSION: "1.0.0"  
     image: demo-api:local
     ports:
       - "8080:8080"
     environment:
       - PORT=8080
-      - APP_VERSION=1.0.0
       - DB_PATH=/data/demo.sqlite
     volumes:
       - ./Backend/data:/data
+
+  # Build v1 version for workshop
+  api-v1:
+    build:
+      context: ./Backend
+      args:                     
+        APP_VERSION: "1.0.0"
+    image: demo-api:v1
+    command: echo "Backend v1 image built"
+
+  # Build v2 version for workshop
+  api-v2:
+    build:
+      context: ./Backend
+      args:                    
+        APP_VERSION: "2.0.0"
+    image: demo-api:v2
+    command: echo "Backend v2 image built"
 
   web:
     build:
@@ -21,6 +41,4 @@ services:
     depends_on:
       - api
     ports:
-      - "8081:80"   # open http://localhost:8081
-
-
+      - "8081:80"

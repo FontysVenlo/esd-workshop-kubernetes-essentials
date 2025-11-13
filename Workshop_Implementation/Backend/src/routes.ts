@@ -3,7 +3,7 @@ import { addItem, deleteItem, listItems } from "./db";
 
 const router = Router();
 const startedAt = Date.now();
-const VERSION = process.env.APP_VERSION || "1.0.0";
+const VERSION = process.env.APP_VERSION ;
 
 router.get("/status", (_req: Request, res: Response) => {
   res.json({

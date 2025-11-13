@@ -1,12 +1,26 @@
 version: '3.8'
 
 services:
-  # Build backend and make it available to k3s via shared volume
-  api:
-    build: ./Backend
-    image: demo-api:local
-    container_name: workshop-api-image
-    command: ["sh", "-c", "echo 'Backend image ready' && tail -f /dev/null"]
+ 
+  api-v1:
+    build:
+      context: ./Backend
+      args:                     
+        APP_VERSION: "1.0.0"
+    image: demo-api:v1
+    container_name: workshop-api-v1
+    command: ["sh", "-c", "echo 'Backend v1 image ready' && tail -f /dev/null"]
+    volumes:
+      - image-cache:/tmp/images
+
+  api-v2:
+    build:
+      context: ./Backend
+      args:                    
+        APP_VERSION: "2.0.0"
+    image: demo-api:v2
+    container_name: workshop-api-v2
+    command: ["sh", "-c", "echo 'Backend v2 image ready' && tail -f /dev/null"]
     volumes:
       - image-cache:/tmp/images
 
@@ -49,7 +63,8 @@ services:
       - --disable=traefik
       - --disable=servicelb
     depends_on:
-      - api
+      - api-v1
+      - api-v2
       - web
     healthcheck:
       test: ["CMD", "kubectl", "get", "nodes"]
@@ -68,7 +83,9 @@ services:
     depends_on:
       k3s:
         condition: service_healthy
-      api:
+      api-v1:
+        condition: service_started
+      api-v2:
         condition: service_started
       web:
         condition: service_started
@@ -84,9 +101,13 @@ services:
         # Wait a bit for k3s containerd to be ready
         sleep 10
         
-        # Load backend image
-        echo "📦 Loading backend image (demo-api:local)..."
-        docker save demo-api:local | docker exec -i workshop-k3s ctr images import - 2>&1 | grep -v "unpacking" || echo "Backend image loaded"
+        # Load backend v1 image
+        echo "📦 Loading backend v1 image (demo-api:v1)..."
+        docker save demo-api:v1 | docker exec -i workshop-k3s ctr images import - 2>&1 | grep -v "unpacking" || echo "Backend v1 loaded"
+        
+        # Load backend v2 image
+        echo "📦 Loading backend v2 image (demo-api:v2)..."
+        docker save demo-api:v2 | docker exec -i workshop-k3s ctr images import - 2>&1 | grep -v "unpacking" || echo "Backend v2 loaded"
         
         # Load frontend image  
         echo "📦 Loading frontend image (demo-web:local)..."
