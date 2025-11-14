@@ -722,6 +722,397 @@ When new pods fail health checks:
 - Old pods **continue serving requests**
 - Your SLA is maintained!
 
+## 🎯 Exercise 3: Self-Healing
 
+**Time**: ~8 minutes  
+**Goal**: Watch Kubernetes automatically recover from failures without human intervention
 
+---
+
+### What You'll Learn
+
+- How Kubernetes maintains desired state automatically
+- How liveness probes detect and restart failed containers
+- How deployments ensure the correct number of replicas
+- Why you don't need to manually fix crashed pods
+
+---
+
+## Understanding Self-Healing
+
+Kubernetes constantly monitors your applications and automatically fixes problems:
+
+1. **Deployment Controller**: Ensures the desired number of pods are always running
+2. **Liveness Probes**: Checks if containers are healthy, restarts them if not
+3. **Service**: Only routes traffic to healthy pods
+
+Let's see this in action!
+
+---
+
+## Part 1: Pod Deletion (2 minutes)
+
+Watch Kubernetes automatically recreate deleted pods.
+
+### Step 1: Check Current State
+
+See how many backend pods are running:
+
+**All platforms (same command):**
+```bash
+docker exec workshop-k3s kubectl get pods -n workshop -l app=backend
+```
+
+You should see **2 backend pods** (because `replicas: 2` in backend.yaml):
+```
+NAME                      READY   STATUS    RESTARTS   AGE
+backend-xxxxx-aaaaa       1/1     Running   0          5m
+backend-xxxxx-bbbbb       1/1     Running   0          5m
+```
+
+### Step 2: Open Monitoring Window
+
+In a **separate terminal**, watch pods in real-time:
+
+**All platforms (same command):**
+```bash
+docker exec workshop-k3s kubectl get pods -n workshop -w
+```
+
+Keep this running!
+
+### Step 3: Delete a Pod
+
+In your **original terminal**, pick one backend pod and delete it:
+
+**All platforms (same command):**
+```bash
+# Replace <pod-name> with actual name from Step 1
+docker exec workshop-k3s kubectl delete pod <pod-name> -n workshop
+```
+
+**Example:**
+```bash
+docker exec workshop-k3s kubectl delete pod backend-xxxxx-aaaaa -n workshop
+```
+
+### Step 4: Watch What Happens
+
+**👀 In your monitoring window:**
+
+You'll see:
+1. The deleted pod: `Terminating`
+2. **Immediately**, a new pod appears (different name)
+3. New pod: `Pending` → `ContainerCreating` → `Running`
+4. Old pod disappears
+5. **Total count stays at 2 pods**
+
+This happens in **seconds**!
+
+### Step 5: Verify
+
+Stop watching (press `Ctrl+C`) and check the final state:
+
+**All platforms (same command):**
+```bash
+docker exec workshop-k3s kubectl get pods -n workshop -l app=backend
+```
+
+You should see:
+- 2 backend pods (same as before)
+- One pod has a very recent AGE (the newly created one)
+
+**🎓 What Just Happened:**
+
+Kubernetes **Deployment** maintains `replicas: 2`. When you deleted a pod:
+1. Deployment noticed: "I have 1 pod, but I need 2"
+2. Deployment created a new pod immediately
+3. New pod started and became ready
+4. Desired state restored
+
+**No human intervention needed!**
+
+---
+
+## Part 2: Container Crash (3 minutes)
+
+Watch Kubernetes automatically restart crashed containers.
+
+### Step 1: Trigger a Crash
+
+Your backend has a special endpoint that crashes the container (for demo purposes):
+
+**Windows PowerShell:**
+```powershell
+Invoke-RestMethod -Method POST -Uri http://localhost:30080/api/crash
+```
+
+**Mac/Linux:**
+```bash
+curl -X POST http://localhost:30080/api/crash
+```
+
+You should get a response:
+```json
+{
+  "message": "This pod will crash in 1 second for demo purposes",
+  "pod": "backend-xxxxx-yyyyy",
+  "note": "Kubernetes will restart this container automatically"
+}
+```
+
+Note the pod name!
+
+### Step 2: Watch the Restart
+
+Immediately check pod status:
+
+**All platforms (same command):**
+```bash
+docker exec workshop-k3s kubectl get pods -n workshop -l app=backend
+```
+
+**What you'll see:**
+
+The pod you crashed will show:
+```
+NAME                      READY   STATUS    RESTARTS   AGE
+backend-xxxxx-yyyyy       0/1     Error     0          2m
+backend-xxxxx-zzzzz       1/1     Running   0          2m
+```
+
+Wait a few seconds and check again:
+
+**All platforms (same command):**
+```bash
+docker exec workshop-k3s kubectl get pods -n workshop -l app=backend
+```
+
+Now it shows:
+```
+NAME                      READY   STATUS    RESTARTS   AGE
+backend-xxxxx-yyyyy       1/1     Running   1          2m  ← RESTARTS increased!
+backend-xxxxx-zzzzz       1/1     Running   0          2m
+```
+
+**Notice:**
+- Same pod name (not deleted)
+- `RESTARTS` increased from `0` to `1`
+- Status back to `Running`
+
+### Step 3: Check Pod Events
+
+See what Kubernetes did:
+
+**All platforms (same command):**
+```bash
+docker exec workshop-k3s kubectl describe pod <crashed-pod-name> -n workshop
+```
+
+Scroll to the **Events** section at the bottom. You'll see:
+```
+Events:
+  Type     Reason     Age   From               Message
+  ----     ------     ----  ----               -------
+  Normal   Pulled     30s   kubelet            Successfully pulled image "demo-api:v1"
+  Warning  BackOff    15s   kubelet            Back-off restarting failed container
+  Normal   Pulled     10s   kubelet            Container image already present on machine
+  Normal   Created    10s   kubelet            Created container backend
+  Normal   Started    10s   kubelet            Started container backend
+```
+
+### Step 4: Check Container Logs
+
+See the crash in the logs:
+
+**All platforms (same command):**
+```bash
+docker exec workshop-k3s kubectl logs <crashed-pod-name> -n workshop --tail=20
+```
+
+You should see:
+```
+[backend-xxxxx-yyyyy] Intentional crash triggered for workshop demo
+```
+
+**🎓 What Just Happened:**
+
+The **Liveness Probe** detected the crash:
+1. Container process exited (crashed)
+2. Liveness probe failed (no response on `/health`)
+3. Kubernetes restarted the **container** (not the whole pod)
+4. New container started fresh
+5. Health check passed → Container ready
+
+**The pod wasn't deleted, just the container inside was restarted!**
+
+---
+
+## Part 3: Chaos Test (3 minutes)
+
+Let's cause chaos and prove the application stays available.
+
+### Step 1: Set Up Monitoring
+
+Open a **new terminal** and monitor the application:
+
+**Windows PowerShell:**
+```powershell
+while($true) { 
+    try {
+        $response = Invoke-WebRequest -Uri http://localhost:30080/api/status -UseBasicParsing
+        Write-Host "✓ OK - Version: $(($response.Content | ConvertFrom-Json).version)" -ForegroundColor Green
+    } catch {
+        Write-Host "✗ FAILED" -ForegroundColor Red
+    }
+    Start-Sleep -Milliseconds 500 
+}
+```
+
+**Mac/Linux:**
+```bash
+while true; do 
+    response=$(curl -s http://localhost:30080/api/status)
+    if [ $? -eq 0 ]; then
+        version=$(echo $response | grep -o '"version":"[^"]*"' | cut -d'"' -f4)
+        echo "✓ OK - Version: $version"
+    else
+        echo "✗ FAILED"
+    fi
+    sleep 0.5
+done
+```
+
+You should see continuous `✓ OK` messages. **Keep this running!**
+
+### Step 2: Cause Chaos
+
+In your **original terminal**, let's cause multiple failures at once.
+
+**First, crash a pod:**
+
+**Windows PowerShell:**
+```powershell
+Invoke-RestMethod -Method POST -Uri http://localhost:30080/api/crash
+```
+
+**Mac/Linux:**
+```bash
+curl -X POST http://localhost:30080/api/crash
+```
+
+**Then immediately delete a different pod:**
+
+**Windows PowerShell:**
+```powershell
+$podName = docker exec workshop-k3s kubectl get pod -l app=backend -n workshop -o jsonpath='{.items[0].metadata.name}'
+docker exec workshop-k3s kubectl delete pod $podName -n workshop
+```
+
+**Mac/Linux:**
+```bash
+docker exec workshop-k3s kubectl delete pod $(docker exec workshop-k3s kubectl get pod -l app=backend -n workshop -o jsonpath='{.items[0].metadata.name}') -n workshop
+```
+
+**Then crash again:**
+
+**Windows PowerShell:**
+```powershell
+Invoke-RestMethod -Method POST -Uri http://localhost:30080/api/crash
+```
+
+**Mac/Linux:**
+```bash
+curl -X POST http://localhost:30080/api/crash
+```
+
+### Step 3: Observe Results
+
+**👀 In your monitoring terminal:**
+
+You should see:
+- Mostly `✓ OK` responses
+- Maybe 1-2 `✗ FAILED` (during brief transition)
+- Quickly back to all `✓ OK`
+
+**Why didn't the app go down?**
+- You have **2 backend pods**
+- When one crashes/deleted → Other pod handles traffic
+- Service only routes to **healthy pods**
+- By the time one recovers, another is ready
+
+**Stop monitoring**: Press `Ctrl+C`
+
+### Step 4: Check Final State
+
+See what happened:
+
+**All platforms (same command):**
+```bash
+docker exec workshop-k3s kubectl get pods -n workshop -l app=backend
+```
+
+You should see:
+- 2 pods running (always!)
+- Increased `RESTARTS` counts
+- Recent `AGE` for recreated pods
+
+**Everything is back to normal, automatically!**
+
+---
+
+## 🎓 What You Learned
+
+### ✅ Automatic Pod Recreation
+- Deployment maintains desired replica count
+- Delete a pod → New pod created instantly
+- No manual intervention needed
+
+### ✅ Container Restarts
+- Liveness probes detect unhealthy containers
+- Failed containers restart automatically
+- Pod survives, just container restarts
+
+### ✅ Zero-Downtime Recovery
+- Multiple replicas provide redundancy
+- Service routes around failed pods
+- Application stays available during chaos
+
+---
+
+## 🔍 Understanding the Mechanisms
+
+### 1. Deployment Controller
+
+**What it does:**
+- Constantly monitors: "Do I have the right number of pods?"
+- If count is wrong → Creates or deletes pods to match `replicas:`
+
+**In your backend.yaml:**
+```yaml
+spec:
+  replicas: 2  # Always maintain 2 pods
+```
+
+### 2. Liveness Probe
+
+**What it does:**
+- Periodically checks if container is alive
+- If check fails → Restarts the container
+
+**In your backend.yaml:**
+```yaml
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 10       # Check every 10 seconds
+```
+
+**How it works:**
+1. Every 10 seconds, Kubernetes calls `GET /health`
+2. If response is OK → Container is healthy
+3. If no response / error → Container is dead
+4. After a few failures → Restart container
 

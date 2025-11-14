@@ -18,6 +18,22 @@ router.get("/items", (_req, res) => {
   res.json(listItems());
 });
 
+router.post("/crash", (req, res) => {
+  const hostname = process.env.HOSTNAME || 'unknown';
+  
+  res.status(200).json({ 
+    message: "This pod will crash in 1 second for demo purposes",
+    pod: hostname,
+    note: "Kubernetes will restart this container automatically"
+  });
+  
+  // Exit after response is sent
+  setTimeout(() => {
+    console.log(`[${hostname}] Intentional crash triggered for workshop demo`);
+    process.exit(1);
+  }, 1000);
+});
+
 router.post("/items", (req, res) => {
   const name = String(req.body?.name || "").trim();
   if (!name) return res.status(400).json({ error: "name is required" });
