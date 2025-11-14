@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
- 
+  # Build backend v1
   api-v1:
     build:
       context: ./Backend
-      args:                     
+      args:
         APP_VERSION: "1.0.0"
     image: demo-api:v1
     container_name: workshop-api-v1
@@ -13,10 +13,11 @@ services:
     volumes:
       - image-cache:/tmp/images
 
+  # Build backend v2
   api-v2:
     build:
       context: ./Backend
-      args:                    
+      args:
         APP_VERSION: "2.0.0"
     image: demo-api:v2
     container_name: workshop-api-v2
@@ -163,7 +164,16 @@ services:
         echo "📦 Deploying Kubernetes Dashboard..."
         kubectl apply -f /k8s/dashboard.yaml
         
-        echo "📦 Deploying backend..."
+        echo "📦 Deploying backend (creates namespace)..."
+        kubectl apply -f /k8s/backend.yaml
+        
+        echo "📦 Deploying ConfigMap..."
+        kubectl apply -f /k8s/configmap.yaml
+        
+        echo "📦 Deploying Secret..."
+        kubectl apply -f /k8s/secret.yaml
+        
+        echo "📦 Updating backend deployment to use ConfigMap/Secret..."
         kubectl apply -f /k8s/backend.yaml
         
         echo "📦 Deploying frontend..."

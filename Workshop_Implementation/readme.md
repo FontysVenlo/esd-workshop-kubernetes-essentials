@@ -1116,3 +1116,488 @@ livenessProbe:
 3. If no response / error → Container is dead
 4. After a few failures → Restart container
 
+## 🎯 Exercise 4: ConfigMaps & Secrets
+
+**Time**: ~10-12 minutes  
+**Goal**: Learn how to configure applications without rebuilding images and handle sensitive data securely
+
+---
+
+### What You'll Learn
+
+- How to separate configuration from code
+- The difference between ConfigMaps and Secrets
+- How to update application config without rebuilding images
+- Why the same image can run in dev, staging, and production
+
+---
+
+## Understanding Configuration Management
+
+In production, you want:
+- **One image** that works everywhere (dev, staging, production)
+- **Different configuration** per environment
+- **No secrets in code** or Docker images
+- **Easy config updates** without redeployment
+
+Kubernetes provides:
+- **ConfigMaps**: For non-sensitive configuration (URLs, feature flags, settings)
+- **Secrets**: For sensitive data (API keys, passwords, tokens)
+
+Let's see them in action!
+
+---
+
+## Part 1: View Current Configuration (2 minutes)
+
+Your backend has a special endpoint that shows its current configuration.
+
+### Step 1: Check Current Config
+
+**Windows PowerShell:**
+```powershell
+Invoke-RestMethod http://localhost:30080/api/config | ConvertTo-Json
+```
+
+**Mac/Linux:**
+```bash
+curl http://localhost:30080/api/config
+```
+
+You should see:
+```json
+{
+  "environment": "development",
+  "feature_new_ui": false,
+  "external_api_url": "https://api.example.com",
+  "max_items": 100,
+  "database_path": "/data/demo.sqlite",
+  "has_api_key": true,
+  "api_key_length": 29
+}
+```
+
+**🎓 What you're seeing:**
+- `environment`: Loaded from **ConfigMap**
+- `feature_new_ui`: Feature flag from **ConfigMap**
+- `external_api_url`: External service URL from **ConfigMap**
+- `max_items`: App setting from **ConfigMap**
+- `has_api_key`: Shows we have a secret (without exposing it!)
+- `api_key_length`: Shows the secret's length (safe to show)
+
+### Step 2: View the ConfigMap
+
+See what's in the ConfigMap:
+
+**All platforms:**
+```bash
+docker exec workshop-k3s kubectl get configmap backend-config -n workshop -o yaml
+```
+
+You'll see:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: workshop
+data:
+  APP_ENV: "development"
+  FEATURE_NEW_UI: "false"
+  EXTERNAL_API_URL: "https://api.example.com"
+  MAX_ITEMS: "100"
+```
+
+**Notice:** It's **plain text** - anyone can read it!
+
+### Step 3: View the Secret
+
+See what's in the Secret:
+
+**All platforms:**
+```bash
+docker exec workshop-k3s kubectl get secret backend-secret -n workshop -o yaml
+```
+
+You'll see:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-secret
+  namespace: workshop
+type: Opaque
+data:
+  API_KEY: c3VwZXItc2VjcmV0LWFwaS1rZXktMTIzNDU=
+```
+
+**Notice:** It's **base64 encoded** - not human-readable, but NOT encrypted!
+
+### Step 4: Decode the Secret (Optional)
+
+Let's see what the secret actually is:
+
+**Windows PowerShell:**
+```powershell
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String("c3VwZXItc2VjcmV0LWFwaS1rZXktMTIzNDU="))
+```
+
+**Mac/Linux:**
+```bash
+echo "c3VwZXItc2VjcmV0LWFwaS1rZXktMTIzNDU=" | base64 --decode
+```
+
+Output:
+```
+super-secret-api-key-12345
+```
+
+**🎓 Important:** Base64 is **NOT encryption** - it's just encoding to handle binary data. Secrets in Kubernetes are:
+- Base64 encoded in YAML (so they can contain any characters)
+- Stored in etcd (can be encrypted at rest with proper K8s config)
+- Only accessible with proper RBAC permissions
+- Not meant to be read directly by humans
+
+---
+
+## Part 2: Update Configuration (4 minutes)
+
+Let's change the configuration **without rebuilding the image**.
+
+### Step 1: Update the ConfigMap
+
+We'll update the ConfigMap by applying a new version.
+
+**Option A: Edit the existing file**
+
+Open `k8s/configmap.yaml` in your text editor and change:
+```yaml
+data:
+  APP_ENV: "development"
+  FEATURE_NEW_UI: "true"      # Change from "false" to "true"
+  EXTERNAL_API_URL: "https://api.example.com"
+  MAX_ITEMS: "200"            # Change from "100" to "200"
+```
+
+Save the file.
+
+**Option B: Use kubectl patch (command line)**
+
+**All platforms:**
+```bash
+docker exec workshop-k3s kubectl patch configmap backend-config -n workshop --type merge -p '{"data":{"FEATURE_NEW_UI":"true","MAX_ITEMS":"200"}}'
+```
+
+You should see:
+```
+configmap/backend-config patched
+```
+
+### Step 2: Restart the Deployment
+
+ConfigMap changes don't automatically restart pods. We need to restart them:
+
+**All platforms:**
+```bash
+docker exec workshop-k3s kubectl rollout restart deployment/backend -n workshop
+```
+
+Watch the rollout:
+```bash
+docker exec workshop-k3s kubectl rollout status deployment/backend -n workshop
+```
+
+Wait until you see:
+```
+deployment "backend" successfully rolled out
+```
+
+### Step 3: Verify the Changes
+
+Check the config again:
+
+**Windows PowerShell:**
+```powershell
+Invoke-RestMethod http://localhost:30080/api/config | ConvertTo-Json
+```
+
+**Mac/Linux:**
+```bash
+curl http://localhost:30080/api/config
+```
+
+Now you should see:
+```json
+{
+  "environment": "development",
+  "feature_new_ui": true,    ← Changed!
+  "external_api_url": "https://api.example.com",
+  "max_items": 200,          ← Changed!
+  "database_path": "/data/demo.sqlite",
+  "has_api_key": true,
+  "api_key_length": 29
+}
+```
+
+**🎓 What Just Happened:**
+1. Changed ConfigMap (just YAML, no code)
+2. Restarted pods to pick up new config
+3. Application now uses new settings
+4. **No image rebuild needed!**
+5. **Same image**, different config
+
+---
+
+## Part 3: Update a Secret (4 minutes)
+
+Let's change the API key.
+
+### Step 1: Create a New Secret Value
+
+First, encode your new secret:
+
+**Windows PowerShell:**
+```powershell
+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("new-production-key-67890"))
+```
+
+**Mac/Linux:**
+```bash
+echo -n "new-production-key-67890" | base64
+```
+
+You'll get something like:
+```
+bmV3LXByb2R1Y3Rpb24ta2V5LTY3ODkw
+```
+
+Copy this value!
+
+### Step 2: Edit the Secret
+
+**All platforms:**
+```bash
+docker exec workshop-k3s kubectl edit secret backend-secret -n workshop
+```
+
+Find the line:
+```yaml
+API_KEY: c3VwZXItc2VjcmV0LWFwaS1rZXktMTIzNDU=
+```
+
+Replace the value with your new base64-encoded secret:
+```yaml
+API_KEY: bmV3LXByb2R1Y3Rpb24ta2V5LTY3ODkw
+```
+
+**Save and exit.**
+
+You should see:
+```
+secret/backend-secret edited
+```
+
+### Step 3: Restart the Deployment
+
+**All platforms:**
+```bash
+docker exec workshop-k3s kubectl rollout restart deployment/backend -n workshop
+docker exec workshop-k3s kubectl rollout status deployment/backend -n workshop
+```
+
+### Step 4: Verify the Change
+
+Check the config:
+
+**Windows PowerShell:**
+```powershell
+Invoke-RestMethod http://localhost:30080/api/config | ConvertTo-Json
+```
+
+**Mac/Linux:**
+```bash
+curl http://localhost:30080/api/config
+```
+
+Now you should see:
+```json
+{
+  "environment": "development",
+  "feature_new_ui": true,
+  "external_api_url": "https://api.example.com",
+  "max_items": 200,
+  "database_path": "/data/demo.sqlite",
+  "has_api_key": true,
+  "api_key_length": 26    ← Changed! (different length)
+}
+```
+
+**🎓 What Just Happened:**
+1. Created new base64-encoded secret
+2. Updated Secret in Kubernetes
+3. Restarted pods to pick up new secret
+4. Application now uses new API key
+5. **API key never appeared in code or images!**
+
+---
+
+## Part 4: Multiple Environments (2 minutes)
+
+Understanding how this works in production.
+
+### The Power of ConfigMaps & Secrets
+
+**Same Image, Different Configs:**
+
+```
+┌─────────────────────────────────────────┐
+│         Docker Image: demo-api:v1       │
+│         (Same code, no config)          │
+└─────────────────────────────────────────┘
+                    │
+        ┌───────────┼───────────┐
+        ▼           ▼           ▼
+   ┌────────┐  ┌────────┐  ┌────────┐
+   │  Dev   │  │Staging │  │  Prod  │
+   │Namespace│ │Namespace│ │Namespace│
+   └────────┘  └────────┘  └────────┘
+        │           │           │
+   ConfigMap    ConfigMap   ConfigMap
+   - ENV: dev   - ENV: staging - ENV: prod
+   - DEBUG:true - DEBUG: true  - DEBUG: false
+   - API: test  - API: staging - API: prod
+        │           │           │
+    Secret       Secret       Secret
+   - KEY: dev123 - KEY: stg456 - KEY: prod789
+```
+
+**Key Benefits:**
+- ✅ **One image** for all environments
+- ✅ **Different configs** per namespace
+- ✅ **Secrets separated** from code
+- ✅ **Easy updates** - just edit ConfigMap
+- ✅ **Version controlled** - ConfigMaps are YAML files
+
+### Real-World Scenario
+
+**Without ConfigMaps:**
+```bash
+# Need 3 different images
+docker build -t app:dev --build-arg ENV=dev .
+docker build -t app:staging --build-arg ENV=staging .
+docker build -t app:prod --build-arg ENV=prod .
+```
+
+**With ConfigMaps:**
+```bash
+# One image
+docker build -t app:v1 .
+
+# Different ConfigMaps
+kubectl apply -f configmap-dev.yaml
+kubectl apply -f configmap-staging.yaml
+kubectl apply -f configmap-prod.yaml
+```
+
+**Result:** Faster builds, easier testing, guaranteed consistency!
+
+---
+
+## 🎓 What You Learned
+
+### ✅ ConfigMaps
+- Store non-sensitive configuration
+- Plain text (anyone can read)
+- Easy to edit and version control
+- Update without rebuilding images
+
+### ✅ Secrets
+- Store sensitive data (API keys, passwords, tokens)
+- Base64 encoded (not encrypted by default!)
+- Only expose to pods that need them
+- Can be encrypted at rest with proper K8s setup
+
+### ✅ Separation of Concerns
+- **Code**: In Docker image
+- **Config**: In ConfigMap
+- **Secrets**: In Secret
+- **Image**: Same everywhere, config differs
+
+### ✅ Twelve-Factor App
+Following [12-factor app](https://12factor.net/config) methodology:
+- Store config in environment
+- Strict separation of config from code
+- No secrets in version control
+
+---
+
+## 🔍 Understanding the Mechanisms
+
+### How ConfigMaps Work
+
+**In backend.yaml:**
+```yaml
+env:
+- name: APP_ENV
+  valueFrom:
+    configMapKeyRef:
+      name: backend-config
+      key: APP_ENV
+```
+
+**What this does:**
+1. Kubernetes reads `backend-config` ConfigMap
+2. Extracts the value of key `APP_ENV`
+3. Sets it as environment variable in container
+4. Application reads `process.env.APP_ENV`
+
+### How Secrets Work
+
+**In backend.yaml:**
+```yaml
+env:
+- name: API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: backend-secret
+      key: API_KEY
+```
+
+**What this does:**
+1. Kubernetes reads `backend-secret` Secret
+2. **Decodes** base64 automatically
+3. Sets plain text as environment variable
+4. Application reads `process.env.API_KEY` (already decoded!)
+
+### Alternative: Volume Mounts
+
+Instead of env vars, you can mount ConfigMaps/Secrets as files:
+
+```yaml
+volumeMounts:
+- name: config
+  mountPath: /etc/config
+  readOnly: true
+
+volumes:
+- name: config
+  configMap:
+    name: backend-config
+```
+
+This creates files like:
+- `/etc/config/APP_ENV` (contains "development")
+- `/etc/config/FEATURE_NEW_UI` (contains "false")
+
+**Use cases:**
+- **Env vars**: Simple key-value pairs
+- **Volume mounts**: Complex config files (JSON, YAML, XML)
+
+---
+
+**Resources:**
+- Official Kubernetes Docs: https://kubernetes.io/docs/
+- Kubernetes Patterns: https://k8spatterns.io/
+- 12-Factor Apps: https://12factor.net/
+
+**Thank you for participating!** 🙏

@@ -1,0 +1,23 @@
+---
+# ConfigMap for Backend Configuration
+# Used for non-sensitive application settings
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: workshop
+  labels:
+    app: backend
+data:
+  # Environment name
+  APP_ENV: "development"
+  
+  # Feature flags (use string "true" or "false")
+  FEATURE_NEW_UI: "false"
+  
+  # External service URL
+  EXTERNAL_API_URL: "https://api.example.com"
+  
+  # Application settings
+  MAX_ITEMS: "100"

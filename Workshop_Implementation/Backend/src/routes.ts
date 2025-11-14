@@ -14,6 +14,19 @@ router.get("/status", (_req: Request, res: Response) => {
   });
 });
 
+router.get("/config", (_req: Request, res: Response) => {
+  res.json({
+    environment: process.env.APP_ENV || "unknown",
+    feature_new_ui: process.env.FEATURE_NEW_UI === "true",
+    external_api_url: process.env.EXTERNAL_API_URL || "not-set",
+    max_items: parseInt(process.env.MAX_ITEMS || "100", 10),
+    database_path: process.env.DB_PATH || "not-set",
+    has_api_key: !!process.env.API_KEY,
+    api_key_length: process.env.API_KEY ? process.env.API_KEY.length : 0
+  });
+});
+
+
 router.get("/items", (_req, res) => {
   res.json(listItems());
 });

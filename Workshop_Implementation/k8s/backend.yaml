@@ -56,6 +56,35 @@ spec:
           value: "/data"
         - name: DB_FILE
           value: "app.db"
+        
+        # Configuration from ConfigMap
+        - name: APP_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: APP_ENV
+        - name: FEATURE_NEW_UI
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: FEATURE_NEW_UI
+        - name: EXTERNAL_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: EXTERNAL_API_URL
+        - name: MAX_ITEMS
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: MAX_ITEMS
+        
+        # Sensitive data from Secret
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: backend-secret
+              key: API_KEY
         resources:
           requests:
             cpu: 100m      # Minimum CPU
