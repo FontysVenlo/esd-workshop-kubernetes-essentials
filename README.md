@@ -41,6 +41,25 @@ cd Workshop_Implementation
 sh ./setup-workshop.sh
 ```
 
+***Important***
+
+On some linux distributions, you have to add a z to the volumes of docker.
+The changes are:
+In docker-compose-yaml, to the api volumes:
+
+```bash
+- ./:/app:z
+```
+
+In docker-compose.workshop.yaml:
+
+```bash
+ ./k8s:/k8s:ro ----> ./k8s:/k8s:ro,z
+/var/run/docker.sock:/var/run/docker.sock ----> /var/run/docker.sock:/var/run/docker.sock:z
+./kubeconfig:/output ----> ./kubeconfig:/output:z
+./k8s:/k8s:ro ----> ./k8s:/k8s:ro,z
+```
+
 This will:
 - ✅ Build your application images (backend + frontend)
 - ✅ Start a Kubernetes cluster (k3s)
