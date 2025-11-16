@@ -27,10 +27,18 @@ If this works without errors, you're ready!
 
 **Run these commands:**
 
+***Windows***
+
 ```bash
 cd Workshop_Implementation
-docker-compose -f docker-compose.workshop.yaml build
-docker-compose -f docker-compose.workshop.yaml up -d
+docker-compose -f docker-compose.workshop.yaml up --build -d
+```
+
+***Linux/Mac***
+
+```bash
+cd Workshop_Implementation
+sh ./setup-workshop.sh
 ```
 
 This will:
