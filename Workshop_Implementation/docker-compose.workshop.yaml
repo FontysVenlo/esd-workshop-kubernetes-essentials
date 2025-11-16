@@ -104,15 +104,15 @@ services:
         
         # Load backend v1 image
         echo "📦 Loading backend v1 image (demo-api:v1)..."
-        docker save demo-api:v1 | docker exec -i workshop-k3s ctr images import - 2>&1 | grep -v "unpacking" || echo "Backend v1 loaded"
+        docker save demo-api:v1 | docker exec -i workshop-k3s ctr images import - || echo "⚠️  Failed to load backend v1"
         
         # Load backend v2 image
         echo "📦 Loading backend v2 image (demo-api:v2)..."
-        docker save demo-api:v2 | docker exec -i workshop-k3s ctr images import - 2>&1 | grep -v "unpacking" || echo "Backend v2 loaded"
+        docker save demo-api:v2 | docker exec -i workshop-k3s ctr images import - || echo "⚠️  Failed to load backend v2"
         
         # Load frontend image  
         echo "📦 Loading frontend image (demo-web:local)..."
-        docker save demo-web:local | docker exec -i workshop-k3s ctr images import - 2>&1 | grep -v "unpacking" || echo "Frontend image loaded"
+        docker save demo-web:local | docker exec -i workshop-k3s ctr images import - || echo "⚠️  Failed to load frontend"
         
         echo ""
         echo "✅ Images loaded successfully!"
@@ -120,7 +120,7 @@ services:
         
         # Verify images are in k3s
         echo "📋 Verifying images in k3s..."
-        docker exec workshop-k3s ctr images list | grep demo || echo "Warning: Images not found"
+        docker exec workshop-k3s ctr images list | grep demo
         
         echo ""
         echo "✅ Image loading complete!"
@@ -207,7 +207,6 @@ services:
         echo ""
         echo "📊 Check metrics:"
         echo "   docker exec workshop-k3s kubectl top pods -n workshop"
-        echo ""
         
         # Keep container running
         tail -f /dev/null
