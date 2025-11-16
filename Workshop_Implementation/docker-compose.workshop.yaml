@@ -179,9 +179,6 @@ services:
         echo "📦 Deploying frontend..."
         kubectl apply -f /k8s/frontend.yaml
         
-        echo "📦 Deploying HPA (HorizontalPodAutoscaler)..."
-        kubectl apply -f /k8s/hpa.yaml
-        
         echo "📦 Deploying load generator (starts at 0 replicas)..."
         kubectl apply -f /k8s/load-generator.yaml
         
@@ -207,7 +204,6 @@ services:
         echo ""
         echo "🔍 Check status:"
         echo "   docker exec workshop-k3s kubectl get pods -n workshop"
-        echo "   docker exec workshop-k3s kubectl get hpa -n workshop"
         echo ""
         echo "📊 Check metrics:"
         echo "   docker exec workshop-k3s kubectl top pods -n workshop"

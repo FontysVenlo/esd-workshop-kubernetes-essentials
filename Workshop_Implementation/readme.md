@@ -19,7 +19,7 @@ If this works without errors, you're ready!
 
 ---
 
-## 🚀 Setup (5 minutes)
+## 🚀 Setup 
 
 ### Step 1: Clone the Repository
 
@@ -121,7 +121,6 @@ docker exec workshop-k3s kubectl top pods -n workshop
 
 ## 🎯 Exercise 1: Scaling in Kubernetes
 
-**Time**: ~15 minutes  
 **Goal**: Learn manual scaling, prove zero-downtime, and see autoscaling in action
 
 ---
@@ -191,7 +190,7 @@ Refresh http://localhost:30081 in your browser.
 
 ---
 
-### Part 2: Zero-Downtime Proof (2-3 minutes)
+### Part 2: Zero-Downtime Proof 
 
 Prove that scaling doesn't break your application.
 
@@ -273,11 +272,32 @@ This is why Kubernetes is so powerful for production applications!
 
 ---
 
-### Part 3: Autoscaling (4-5 minutes)
+### Part 3: Autoscaling 
 
 Watch Kubernetes automatically scale based on load.
 
-#### Step 1: Check HPA Status
+### Step 1: Deploy the HPA (HorizontalPodAutoscaler)
+
+Now that we've explored manual scaling, let's enable autoscaling:
+
+**All platforms:**
+```bash
+docker exec workshop-k3s kubectl apply -f k8s/hpa.yaml
+```
+
+You should see:
+```
+horizontalpodautoscaler.autoscaling/backend-hpa created
+horizontalpodautoscaler.autoscaling/frontend-hpa created
+```
+
+**What this does:**
+- Creates autoscaling rules for backend and frontend
+- Backend: Scale between 2-10 pods based on CPU usage
+- Frontend: Scale between 2-8 pods based on CPU usage
+
+
+#### Step 2: Check HPA Status
 
 HPA (HorizontalPodAutoscaler) is already configured. Check it:
 ```bash
@@ -297,7 +317,7 @@ backend-hpa    Deployment/backend    1%/50%    3         10        3
 - **MAXPODS**: Maximum number of pods (won't go above this)
 - **REPLICAS**: Current number of pods running
 
-#### Step 2: Check Current Resource Usage
+#### Step 3: Check Current Resource Usage
 
 See how much CPU/memory your pods are using:
 ```bash
@@ -306,21 +326,21 @@ docker exec workshop-k3s kubectl top pods -n workshop
 
 You should see low CPU usage (a few millicores like `1m` or `2m`).
 
-#### Step 3: Start the Load Generator
+#### Step 4: Start the Load Generator
 
 The load generator will send many requests to the backend to create CPU load:
 
 ```bash
-docker exec workshop-k3s kubectl scale deployment/load-generator --replicas=3 -n workshop
+docker exec workshop-k3s kubectl scale deployment/load-generator --replicas=12 -n workshop
 ```
 
-**What this does**: Creates 3 pods that continuously hit the backend API.
+**What this does**: Creates 12 pods that continuously hit the backend API.
 
 **👀 In Dashboard:**
 - Navigate to **Workloads** → **Pods**
-- You'll see 3 new `load-generator` pods appear
+- You'll see 12 new `load-generator` pods appear
 
-#### Step 4: Watch Autoscaling Happen
+#### Step 5: Watch Autoscaling Happen
 
 Open **two terminal windows** and run these commands:
 
@@ -349,7 +369,7 @@ docker exec workshop-k3s kubectl get pods -n workshop -w
 - See the replica count increase automatically
 - No manual commands needed!
 
-#### Step 5: Stop the Load
+#### Step 6: Stop the Load
 
 Now stop generating load:
 ```bash
@@ -367,7 +387,7 @@ docker exec workshop-k3s kubectl scale deployment/load-generator --replicas=0 -n
 
 Press `Ctrl+C` in both monitoring terminals when done.
 
-#### Step 6: Verify Final State
+#### Step 7: Verify Final State
 
 ```bash
 docker exec workshop-k3s kubectl get hpa -n workshop
@@ -408,7 +428,6 @@ Everything should be back to the starting state:
 
 ## 🎯 Exercise 2: Rolling Updates & Rollbacks
 
-**Time**: ~10 minutes  
 **Goal**: Deploy new versions without downtime and rollback instantly if something breaks
 
 ---
@@ -422,7 +441,7 @@ Everything should be back to the starting state:
 
 ---
 
-## Part 1: Successful Update (v1 → v2) (5 minutes)
+## Part 1: Successful Update (v1 → v2) 
 
 Deploy a new version and watch Kubernetes update gradually.
 
@@ -542,7 +561,7 @@ docker exec workshop-k3s kubectl rollout history deployment/backend -n workshop
 
 ---
 
-## Part 2: Failed Update & Rollback (v2 → v3) (5 minutes)
+## Part 2: Failed Update & Rollback (v2 → v3) 
 
 Now let's see what happens when an update fails.
 
@@ -606,17 +625,25 @@ This will timeout because the rollout can't complete:
 Waiting for deployment "backend" rollout to finish: 1 out of 2 new replicas have been updated...
 error: timed out waiting for the condition
 ```
-
 ### Step 5: Inspect a Failed Pod
 
 Pick one of the failing pods and check what's wrong:
 
+**All platforms:**
 ```bash
-# Get the name of a failed pod
-docker exec workshop-k3s kubectl get pods -n workshop | grep ImagePull
+# First, get the list of pods
+docker exec workshop-k3s kubectl get pods -n workshop
+```
 
-# Describe it to see the error
-docker exec workshop-k3s kubectl describe pod <failed-pod-name> -n workshop
+Look for a pod with status `ImagePullBackOff` or `ErrImagePull`. Copy its name, then describe it:
+```bash
+# Replace  with the actual pod name you copied
+docker exec workshop-k3s kubectl describe pod  -n workshop
+```
+
+**Example:**
+```bash
+docker exec workshop-k3s kubectl describe pod backend-7d4b9c8f6d-x9k2l -n workshop
 ```
 
 Look for the **Events** section at the bottom. You'll see:
@@ -724,7 +751,6 @@ When new pods fail health checks:
 
 ## 🎯 Exercise 3: Self-Healing
 
-**Time**: ~8 minutes  
 **Goal**: Watch Kubernetes automatically recover from failures without human intervention
 
 ---
@@ -750,7 +776,7 @@ Let's see this in action!
 
 ---
 
-## Part 1: Pod Deletion (2 minutes)
+## Part 1: Pod Deletion 
 
 Watch Kubernetes automatically recreate deleted pods.
 
@@ -834,7 +860,7 @@ Kubernetes **Deployment** maintains `replicas: 2`. When you deleted a pod:
 
 ---
 
-## Part 2: Container Crash (3 minutes)
+## Part 2: Container Crash 
 
 Watch Kubernetes automatically restart crashed containers.
 
@@ -948,7 +974,7 @@ The **Liveness Probe** detected the crash:
 
 ---
 
-## Part 3: Chaos Test (3 minutes)
+## Part 3: Chaos Test
 
 Let's cause chaos and prove the application stays available.
 
@@ -1117,8 +1143,7 @@ livenessProbe:
 4. After a few failures → Restart container
 
 ## 🎯 Exercise 4: ConfigMaps & Secrets
-
-**Time**: ~10-12 minutes  
+ 
 **Goal**: Learn how to configure applications without rebuilding images and handle sensitive data securely
 
 ---
@@ -1148,7 +1173,7 @@ Let's see them in action!
 
 ---
 
-## Part 1: View Current Configuration (2 minutes)
+## Part 1: View Current Configuration 
 
 Your backend has a special endpoint that shows its current configuration.
 
@@ -1260,7 +1285,7 @@ super-secret-api-key-12345
 
 ---
 
-## Part 2: Update Configuration (4 minutes)
+## Part 2: Update Configuration 
 
 Let's change the configuration **without rebuilding the image**.
 
@@ -1268,7 +1293,7 @@ Let's change the configuration **without rebuilding the image**.
 
 We'll update the ConfigMap by applying a new version.
 
-**Option A: Edit the existing file**
+**Edit the existing file**
 
 Open `k8s/configmap.yaml` in your text editor and change:
 ```yaml
@@ -1281,38 +1306,56 @@ data:
 
 Save the file.
 
-**Option B: Use kubectl patch (command line)**
+```bash
+docker exec workshop-k3s kubectl rollout restart deployment/backend -n workshop
+```
+### Step 2: Apply the Updated ConfigMap
 
 **All platforms:**
 ```bash
-docker exec workshop-k3s kubectl patch configmap backend-config -n workshop --type merge -p '{"data":{"FEATURE_NEW_UI":"true","MAX_ITEMS":"200"}}'
+docker exec workshop-k3s kubectl apply -f k8s/configmap.yaml
 ```
 
 You should see:
 ```
-configmap/backend-config patched
+configmap/backend-config configured
 ```
 
-### Step 2: Restart the Deployment
+### Step 3: Restart Pods to Pick Up New Config
 
-ConfigMap changes don't automatically restart pods. We need to restart them:
+ConfigMap changes don't automatically update running pods. Delete the pods so they restart with the new config:
 
 **All platforms:**
 ```bash
-docker exec workshop-k3s kubectl rollout restart deployment/backend -n workshop
+docker exec workshop-k3s kubectl delete pods -l app=backend -n workshop
 ```
 
-Watch the rollout:
+You should see:
+```
+pod "backend-xxxxx-yyyyy" deleted
+pod "backend-xxxxx-zzzzz" deleted
+```
+
+Watch the pods get recreated:
+
+**All platforms:**
 ```bash
-docker exec workshop-k3s kubectl rollout status deployment/backend -n workshop
+docker exec workshop-k3s kubectl get pods -n workshop -w
 ```
 
-Wait until you see:
-```
-deployment "backend" successfully rolled out
-```
+Wait until you see both backend pods with:
+- STATUS: `Running`
+- READY: `1/1`
 
-### Step 3: Verify the Changes
+Then press `Ctrl+C` to stop watching.
+
+**🎓 What's Happening:**
+- Kubernetes Deployment sees pods are missing
+- Immediately creates new pods
+- New pods load fresh ConfigMap values
+- Total downtime: ~10-20 seconds (other pod handles traffic)
+
+### Step 4: Verify the Changes
 
 Check the config again:
 
@@ -1335,7 +1378,7 @@ Now you should see:
   "max_items": 200,          ← Changed!
   "database_path": "/data/demo.sqlite",
   "has_api_key": true,
-  "api_key_length": 29
+  "api_key_length": 26
 }
 ```
 
@@ -1348,13 +1391,14 @@ Now you should see:
 
 ---
 
-## Part 3: Update a Secret (4 minutes)
 
-Let's change the API key.
+## Part 3: Update a Secret 
+
+Let's change the API key to show how Secrets work.
 
 ### Step 1: Create a New Secret Value
 
-First, encode your new secret:
+First, we need to base64-encode our new secret value.
 
 **Windows PowerShell:**
 ```powershell
@@ -1366,46 +1410,62 @@ First, encode your new secret:
 echo -n "new-production-key-67890" | base64
 ```
 
-You'll get something like:
+You'll get:
 ```
 bmV3LXByb2R1Y3Rpb24ta2V5LTY3ODkw
 ```
 
-Copy this value!
+**Copy this value!**
 
-### Step 2: Edit the Secret
+### Step 2: Edit the Secret File
+
+Open `k8s/secret.yaml` in your text editor and update the API_KEY value:
+
+**Find this line:**
+```yaml
+data:
+  # API_KEY value: "super-secret-api-key-12345"
+  API_KEY: c3VwZXItc2VjcmV0LWFwaS1rZXktMTIzNDU=
+```
+
+**Replace with your new base64 value:**
+```yaml
+data:
+  # API_KEY value: "new-production-key-67890"
+  API_KEY: bmV3LXByb2R1Y3Rpb24ta2V5LTY3ODkw
+```
+
+**Save the file.**
+
+### Step 3: Apply the Updated Secret
 
 **All platforms:**
 ```bash
-docker exec workshop-k3s kubectl edit secret backend-secret -n workshop
+docker exec workshop-k3s kubectl apply -f k8s/secret.yaml
 ```
-
-Find the line:
-```yaml
-API_KEY: c3VwZXItc2VjcmV0LWFwaS1rZXktMTIzNDU=
-```
-
-Replace the value with your new base64-encoded secret:
-```yaml
-API_KEY: bmV3LXByb2R1Y3Rpb24ta2V5LTY3ODkw
-```
-
-**Save and exit.**
 
 You should see:
 ```
-secret/backend-secret edited
+secret/backend-secret configured
 ```
 
-### Step 3: Restart the Deployment
+### Step 4: Restart Pods to Pick Up New Secret
 
 **All platforms:**
 ```bash
-docker exec workshop-k3s kubectl rollout restart deployment/backend -n workshop
-docker exec workshop-k3s kubectl rollout status deployment/backend -n workshop
+docker exec workshop-k3s kubectl delete pods -l app=backend -n workshop
 ```
 
-### Step 4: Verify the Change
+Watch the pods restart:
+
+**All platforms:**
+```bash
+docker exec workshop-k3s kubectl get pods -n workshop -w
+```
+
+Wait for both pods to show `Running` and `1/1 READY`, then press `Ctrl+C`.
+
+### Step 5: Verify the Change
 
 Check the config:
 
@@ -1428,20 +1488,21 @@ Now you should see:
   "max_items": 200,
   "database_path": "/data/demo.sqlite",
   "has_api_key": true,
-  "api_key_length": 26    ← Changed! (different length)
+  "api_key_length": 24    ← Changed! (different length)
 }
 ```
 
+**Notice:** The `api_key_length` changed from `26` to `24` characters!
+
 **🎓 What Just Happened:**
 1. Created new base64-encoded secret
-2. Updated Secret in Kubernetes
-3. Restarted pods to pick up new secret
-4. Application now uses new API key
-5. **API key never appeared in code or images!**
+2. Edited the Secret file directly
+3. Applied the updated Secret to Kubernetes
+4. Deleted pods so they reload with new secret
+5. Application now uses new API key
+6. **API key never appeared in code or images!**
 
----
-
-## Part 4: Multiple Environments (2 minutes)
+## Part 4: Multiple Environments 
 
 Understanding how this works in production.
 
@@ -1478,30 +1539,6 @@ Understanding how this works in production.
 - ✅ **Easy updates** - just edit ConfigMap
 - ✅ **Version controlled** - ConfigMaps are YAML files
 
-### Real-World Scenario
-
-**Without ConfigMaps:**
-```bash
-# Need 3 different images
-docker build -t app:dev --build-arg ENV=dev .
-docker build -t app:staging --build-arg ENV=staging .
-docker build -t app:prod --build-arg ENV=prod .
-```
-
-**With ConfigMaps:**
-```bash
-# One image
-docker build -t app:v1 .
-
-# Different ConfigMaps
-kubectl apply -f configmap-dev.yaml
-kubectl apply -f configmap-staging.yaml
-kubectl apply -f configmap-prod.yaml
-```
-
-**Result:** Faster builds, easier testing, guaranteed consistency!
-
----
 
 ## 🎓 What You Learned
 
@@ -1522,12 +1559,6 @@ kubectl apply -f configmap-prod.yaml
 - **Config**: In ConfigMap
 - **Secrets**: In Secret
 - **Image**: Same everywhere, config differs
-
-### ✅ Twelve-Factor App
-Following [12-factor app](https://12factor.net/config) methodology:
-- Store config in environment
-- Strict separation of config from code
-- No secrets in version control
 
 ---
 
@@ -1569,35 +1600,9 @@ env:
 3. Sets plain text as environment variable
 4. Application reads `process.env.API_KEY` (already decoded!)
 
-### Alternative: Volume Mounts
-
-Instead of env vars, you can mount ConfigMaps/Secrets as files:
-
-```yaml
-volumeMounts:
-- name: config
-  mountPath: /etc/config
-  readOnly: true
-
-volumes:
-- name: config
-  configMap:
-    name: backend-config
-```
-
-This creates files like:
-- `/etc/config/APP_ENV` (contains "development")
-- `/etc/config/FEATURE_NEW_UI` (contains "false")
-
-**Use cases:**
-- **Env vars**: Simple key-value pairs
-- **Volume mounts**: Complex config files (JSON, YAML, XML)
-
 ---
 
 **Resources:**
 - Official Kubernetes Docs: https://kubernetes.io/docs/
-- Kubernetes Patterns: https://k8spatterns.io/
-- 12-Factor Apps: https://12factor.net/
 
-**Thank you for participating!** 🙏
+**Thank you for participating!** 
